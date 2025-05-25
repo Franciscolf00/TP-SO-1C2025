@@ -9,8 +9,6 @@
 #include <semaphore.h>
 
 
-// CAMBIAR LOS PRINT POR COUT?? PREGUNTAR SI ES NECESARIO
-
 // Constantes: se producirán 10 autos, y el tiempo base por estación es 5 segundos.
 #define MAX_AUTOS 10
 #define TIEMPO_ESTACION 5
@@ -75,11 +73,11 @@ void chasis(t_estadisticas *stat, sem_t *sem)
     while (prob > 90)
     {
         printf("chasis defectuoso, cambiando chasis...\n");
-        // sem V
+        sem_wait(sem); // P()
         stat->partes_defectuosas++;
         stat->tiempo_total_produccion += tiempo;
         stat->costo_total += costo;
-        // sem P
+        sem_post(sem); // V()
         sleep(TIEMPO_ESTACION); // Opcional
 
         prob = ((rand() % 100) + 1);
@@ -88,10 +86,10 @@ void chasis(t_estadisticas *stat, sem_t *sem)
         tiempo = (rand() % (TIEMPO_CHASIS / 2)) + TIEMPO_CHASIS;
     }
 
-    // sem V
+    sem_wait(sem); // P()
     stat->costo_total += costo;
     stat->tiempo_total_produccion += tiempo;
-    // Sem P
+    sem_post(sem); // V()
 }
 
 void motor(t_estadisticas *stat, sem_t *sem)
@@ -104,11 +102,11 @@ void motor(t_estadisticas *stat, sem_t *sem)
     while (prob > 90)
     {
         printf("motor defectuoso, cambiando motor...\n");
-        // sem V
+        sem_wait(sem); // P()
         stat->partes_defectuosas++;
         stat->tiempo_total_produccion += tiempo;
         stat->costo_total += costo;
-        // Sem P
+        sem_post(sem); // V()
         sleep(TIEMPO_ESTACION);
 
         prob = (rand() % 100) + 1;
@@ -117,10 +115,10 @@ void motor(t_estadisticas *stat, sem_t *sem)
         tiempo = (rand() % (TIEMPO_MOTOR / 2)) + TIEMPO_MOTOR;
     }
 
-    // sem V
+    sem_wait(sem); // P()
     stat->costo_total += costo;
     stat->tiempo_total_produccion += tiempo;
-    // Sem P
+    sem_post(sem); // V()
 }
 
 
@@ -134,11 +132,11 @@ void vidrios(t_estadisticas *stat, sem_t *sem)
     while (prob > 90)
     {
         printf("vidrios defectuosos, cambiando vidrios...\n");
-        // sem V
+        sem_wait(sem); // P()
         stat->partes_defectuosas++;
         stat->tiempo_total_produccion += tiempo;
         stat->costo_total += costo;
-        // Sem P
+        sem_post(sem); // V()
 
         sleep(TIEMPO_ESTACION);
 
@@ -147,10 +145,10 @@ void vidrios(t_estadisticas *stat, sem_t *sem)
         tiempo = (rand() % (TIEMPO_VIDRIOS / 2)) + TIEMPO_VIDRIOS;
     }
 
-    // sem V
+    sem_wait(sem); // P()
     stat->costo_total += costo;
     stat->tiempo_total_produccion += tiempo;
-    // Sem P
+    sem_post(sem); // V()
 }
 
 
@@ -164,11 +162,11 @@ void interior(t_estadisticas *stat, sem_t *sem)
     while (prob > 90)
     {
         printf("interiores defectuosos, cambiando interiores...\n");
-        // sem V
+        sem_wait(sem); // P()
         stat->partes_defectuosas++;
         stat->tiempo_total_produccion += tiempo;
         stat->costo_total += costo;
-        // Sem P
+        sem_post(sem); // V()
 
         sleep(TIEMPO_ESTACION);
 
@@ -178,10 +176,10 @@ void interior(t_estadisticas *stat, sem_t *sem)
         tiempo = (rand() % (TIEMPO_INTERIORES / 2)) + TIEMPO_INTERIORES;
     }
 
-    // sem V
+    sem_wait(sem); // P()
     stat->costo_total += costo;
     stat->tiempo_total_produccion += tiempo;
-    // Sem P
+    sem_post(sem); // V()
 }
 
 
@@ -195,11 +193,11 @@ void pintura(t_estadisticas *stat, sem_t *sem)
     while (prob > 90)
     {
         printf("pintura defectuosa, cambiando pintura...\n");
-        // sem V
+        sem_wait(sem); // P()
         stat->partes_defectuosas++;
         stat->tiempo_total_produccion += tiempo;
         stat->costo_total += costo;
-        // Sem P
+        sem_post(sem); // V()
 
         sleep(TIEMPO_ESTACION);
 
@@ -208,10 +206,10 @@ void pintura(t_estadisticas *stat, sem_t *sem)
         tiempo = (rand() % (TIEMPO_PINTURA / 2)) + TIEMPO_PINTURA;
     }
 
-    // sem V
+    sem_wait(sem); // P()
     stat->costo_total += costo;
     stat->tiempo_total_produccion += tiempo;
-    // Sem P
+    sem_post(sem); // V()
 }
 
 
