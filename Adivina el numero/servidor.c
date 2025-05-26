@@ -10,11 +10,10 @@
 
 //defines y estructuras
 #define PUERTO 12345
-#define MAX_JUGADORES 5
+#define MAX_JUGADORES 3
 
 typedef struct {
     int socket;
-    char nombre[50];
     int id;
     int puntos;
     bool activo;
@@ -32,8 +31,10 @@ pthread_cond_t cond_inicio_juego = PTHREAD_COND_INITIALIZER; //sirve para dormir
 //Declaración de funciones
 void* manejarJugador (void* pSocketJugador);
 void* hiloMaestro(void* arg);
-bool crearJugador(int socketJugador);
+int crearJugador(int socketJugador);
+void borrarJugador(int idxJugador);
 int buscar_lugar_libre();
+void imprimir_jugadores();
 
 int main(int argc, char const *argv[])
 {
@@ -42,6 +43,7 @@ int main(int argc, char const *argv[])
     struct sockaddr_in servidorAddr, clienteAddr;
     socklen_t cliente_len = sizeof(clienteAddr);
     bool jugadorCreado;
+    char buffer[100];
 
     servidor = socket(AF_INET, SOCK_STREAM, 0);
     if(servidor < 0)
@@ -87,6 +89,10 @@ int main(int argc, char const *argv[])
 
         } else {
             // Imprimir que el servidor está lleno, intentarlo más tarde, etc
+            snprintf(buffer, sizeof(buffer), "El servidor está lleno, intentelo más tarde\n");
+            send(*nuevoSocket, buffer, strlen(buffer), 0);
+            close(*nuevoSocket);
+            free(nuevoSocket);
         }
     }
 
@@ -101,28 +107,32 @@ void* manejarJugador (void* pSocketJugador)
     int socketJugador = *(int*)pSocketJugador;
     free(pSocketJugador);
     
+    imprimir_jugadores(); //para probar funcionamiento
+
     char buffer[1024];
-    bool jugadorCreado = crearJugador(socketJugador);
-    if (!jugadorCreado) {
+    int idxJugador = crearJugador(socketJugador);
+    if (idxJugador < 0) {
         close(socketJugador); //cierro socket
         pthread_mutex_lock(&mutexJugadores); //resto jugadores activos
-        jugadoresActivos--;
+        jugadoresActivos--; //Podría agregarlo en crear jugador si no se pudo crear ya que tengo el lock del mutex
         pthread_mutex_unlock(&mutexJugadores);
         return NULL;
     }
 
-    snprintf(buffer, strlen(buffer), "Bienvenido al servidor.\n");
-    send(socketJugador, buffer, sizeof(buffer)-1, 0);
+    snprintf(buffer, sizeof(buffer), "Bienvenido al servidor.\n");
+    send(socketJugador, buffer, strlen(buffer), 0);
 
     printf("Jugador conectado.\n");
 
-    // Acá va la lógica del juego
+    imprimir_jugadores(); //para probar funcionamiento
 
-    close(socketJugador);
+    if(recv(socketJugador, buffer, sizeof(buffer), 0) <= 0)
+    {
+        borrarJugador(idxJugador);
+        return NULL;
+    }
 
-    pthread_mutex_lock(&mutexJugadores);
-    jugadoresActivos--;
-    pthread_mutex_unlock(&mutexJugadores);
+    borrarJugador(idxJugador);
 
     return NULL;
 }
@@ -132,39 +142,48 @@ void* hiloMaestro(void* arg)
     return NULL;
 }
 
-bool crearJugador (int socketJugador)
+int crearJugador (int socketJugador)
 {
-    char nombre[50];
     char mensaje[128];
-    // Pedir nombre
-    snprintf(mensaje, sizeof(mensaje), "Ingrese su nombre: ");
-    send(socketJugador, mensaje, strlen(mensaje), 0);
-    int bytes;
-    if ((bytes = recv(socketJugador, nombre, sizeof(nombre), 0)) <= 0) {
-        return false;
-    }
-    nombre[bytes - 1] = '\0'; // remover newline si lo hay
 
-    pthread_mutex_lock(&mutexJugadores);
+    pthread_mutex_lock(&mutexJugadores); //Podría agregar un mutex para la lista?
 
     int i = buscar_lugar_libre();
     if(i < 0)
     {
         pthread_mutex_unlock(&mutexJugadores);
-        return false;
+        return i;
     }
 
     pthread_mutex_lock(&mutexId); 
     listaJugadores[i].id = id++; //Asigno id e incremento uno
     pthread_mutex_unlock(&mutexId);
-
+    // Asigno valores al jugador
     listaJugadores[i].socket = socketJugador;
-    strcpy(listaJugadores[i].nombre, nombre);
     listaJugadores[i].puntos = 0;
     listaJugadores[i].activo = 1;
+    snprintf(mensaje, sizeof(mensaje), "Su ID es: %d\n", listaJugadores[i].id);
+    send(socketJugador, mensaje, strlen(mensaje), 0);
     pthread_mutex_unlock(&mutexJugadores);
+
     
-    return true;
+    return i;
+}
+
+void borrarJugador(int idxJugador)
+{
+    pthread_mutex_lock(&mutexJugadores);
+
+    if (listaJugadores[idxJugador].activo) {
+        close(listaJugadores[idxJugador].socket);      // cierra si no estaba cerrado
+        listaJugadores[idxJugador].activo = false;
+        listaJugadores[idxJugador].puntos = 0;         // resetear puntos
+
+        jugadoresActivos--;                     // libera un lugar
+        printf("Jugador %d desconectado ➜ lugar %d libre\n", listaJugadores[idxJugador].id, idxJugador);
+    }
+
+    pthread_mutex_unlock(&mutexJugadores);
 }
 
 int buscar_lugar_libre() {
@@ -173,4 +192,16 @@ int buscar_lugar_libre() {
             return i;
     }
     return -1;  // lista llena
+}
+
+void imprimir_jugadores() {
+    pthread_mutex_lock(&mutexJugadores);
+    printf("📋 Lista de jugadores:\n");
+    for (int i = 0; i < MAX_JUGADORES; i++) {
+        printf("[%d] | ID: %d | Activo: %d\n",
+               i,
+               listaJugadores[i].id,
+               listaJugadores[i].activo);
+    }
+    pthread_mutex_unlock(&mutexJugadores);
 }
