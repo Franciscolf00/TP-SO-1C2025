@@ -343,6 +343,7 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
             printf("\n\nAuto: %d\n", i+1);
             chasis(estadisticas, semaforo);
             printf("[PID %d] %s trabajando en auto %d\n", getpid(), "Chasis", i + 1);
+            //Compruebo que este en paralelo y no sea todo secuencial
             sem_post(sem_motor);
         }
         exit(0);
