@@ -13,6 +13,7 @@
 #define MAX_AUTOS 10
 #define TIEMPO_ESTACION 5
 #define ESTACIONES_TRABAJO 5
+#define PROBABILIDAD_ACIERTO 90 // Del 1 al 100
 
 // Indices de cada estacion
 #define ESTACION_CHASIS 0
@@ -85,9 +86,9 @@ void chasis(t_estadisticas *stat, sem_t *sem)
     int tiempo = (rand() % (TIEMPO_CHASIS / 2)) + TIEMPO_CHASIS;
     int cantidad_defectuosos;
     
-    if(prob<90)
+    if(prob < PROBABILIDAD_ACIERTO)
         printf("Chasis instalado\n");
-    while (prob > 90)
+    while (prob > PROBABILIDAD_ACIERTO)
     {
         printf("chasis defectuoso, cambiando chasis...\n");
         sem_wait(sem); // P()
@@ -121,9 +122,9 @@ void motor(t_estadisticas *stat, sem_t *sem)
     int tiempo = (rand() % (TIEMPO_MOTOR / 2)) + TIEMPO_MOTOR;
 
 
-    if(prob<=90)
+    if(prob<= PROBABILIDAD_ACIERTO)
         printf("motor instalado\n");
-    while (prob > 90)
+    while (prob > PROBABILIDAD_ACIERTO)
     {
         printf("motor defectuoso, cambiando motor...\n");
         sem_wait(sem); // P()
@@ -157,9 +158,9 @@ void vidrios(t_estadisticas *stat, sem_t *sem)
 
     int tiempo = (rand() % (TIEMPO_VIDRIOS / 2)) + TIEMPO_VIDRIOS;
 
-    if(prob<=90)
+    if(prob<= PROBABILIDAD_ACIERTO)
         printf("vidrios instalado\n");
-    while (prob > 90)
+    while (prob > PROBABILIDAD_ACIERTO)
     {
         printf("vidrios defectuosos, cambiando vidrios...\n");
         sem_wait(sem); // P()
@@ -193,9 +194,9 @@ void interior(t_estadisticas *stat, sem_t *sem)
 
     int tiempo = (rand() % (TIEMPO_INTERIORES / 2)) + TIEMPO_INTERIORES;
 
-    if(prob<=90)
+    if(prob<= PROBABILIDAD_ACIERTO)
         printf("Interior instalado\n");
-    while (prob > 90)
+    while (prob > PROBABILIDAD_ACIERTO)
     {
         printf("interiores defectuosos, cambiando interiores...\n");
         sem_wait(sem); // P()
@@ -230,9 +231,9 @@ void pintura(t_estadisticas *stat, sem_t *sem)
     
     int tiempo = (rand() % (TIEMPO_PINTURA / 2)) + TIEMPO_PINTURA;
 
-    if(prob<=90)
+    if(prob<= PROBABILIDAD_ACIERTO)
         printf("Pintura instalado\n");
-    while (prob > 90)
+    while (prob > PROBABILIDAD_ACIERTO)
     {
         printf("pintura defectuosa, cambiando pintura...\n");
         sem_wait(sem); // P()
@@ -341,6 +342,7 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
         {
             printf("\n\nAuto: %d\n", i+1);
             chasis(estadisticas, semaforo);
+            printf("[PID %d] %s trabajando en auto %d\n", getpid(), "Chasis", i + 1);
             sem_post(sem_motor);
         }
         exit(0);
