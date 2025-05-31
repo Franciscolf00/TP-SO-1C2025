@@ -326,6 +326,11 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
                                O_CREAT,
                                0600,
                                0);
+    
+     sem_t *sem_pantalla = sem_open("sem_pantalla",
+                               O_CREAT,
+                               0600,
+                               1);
 
 
     // un pid para cada estacion de trabajo, asi tengo un porceso hijo por cada una
@@ -340,10 +345,13 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
     {
         for (i = 0; i < MAX_AUTOS; i++)
         {
+            sem_wait(sem_pantalla);
             printf("\n\nAuto: %d\n", i+1);
+            sem_post(sem_pantalla);
             chasis(estadisticas, semaforo);
-            printf("[PID %d] %s trabajando en auto %d\n", getpid(), "Chasis", i + 1);
-            //Compruebo que este en paralelo y no sea todo secuencial
+            sem_wait(sem_pantalla);
+            printf("([PID %d] finalizo la instalacion de %s en auto %d)\n", getpid(), "Chasis", i + 1); //Compruebo que este en paralelo y no sea todo secuencial
+            sem_post(sem_pantalla);
             sem_post(sem_motor);
         }
         exit(0);
@@ -355,8 +363,13 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
         for (i = 0; i < MAX_AUTOS; i++)
         {
             sem_wait(sem_motor);
+            sem_wait(sem_pantalla);
             printf("\n\nAuto: %d\n", i+1);
+            sem_post(sem_pantalla);
             motor(estadisticas, semaforo);
+            sem_wait(sem_pantalla);
+            printf("([PID %d] finalizo la instalacion de %s en auto %d)\n", getpid(), "motor", i + 1);
+            sem_post(sem_pantalla);
             sem_post(sem_vidrios);
         }
         exit(0);
@@ -368,8 +381,13 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
         for (i = 0; i < MAX_AUTOS; i++)
         {
             sem_wait(sem_vidrios);
+            sem_wait(sem_pantalla);
             printf("\n\nAuto: %d\n", i+1);
+            sem_post(sem_pantalla);
             vidrios(estadisticas, semaforo);
+            sem_wait(sem_pantalla);
+            printf("([PID %d] finalizo la instalacion de %s en auto %d)\n", getpid(), "vidrios", i + 1);
+            sem_post(sem_pantalla);
             sem_post(sem_interior);
         }
         exit(0);
@@ -381,8 +399,13 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
         for (i = 0; i < MAX_AUTOS; i++)
         {
             sem_wait(sem_interior);
+            sem_wait(sem_pantalla);
             printf("\n\nAuto: %d\n", i+1);
+            sem_post(sem_pantalla);
             interior(estadisticas, semaforo);
+            sem_wait(sem_pantalla);
+            printf("([PID %d] finalizo la instalacion de %s en auto %d)\n", getpid(), "interior", i + 1);
+            sem_post(sem_pantalla);
             sem_post(sem_pintura);
         }
         exit(0);
@@ -394,8 +417,13 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
         for (i = 0; i < MAX_AUTOS; i++)
         {
             sem_wait(sem_pintura);
+            sem_wait(sem_pantalla);
             printf("\n\nAuto: %d\n", i+1);
+            sem_post(sem_pantalla);
             pintura(estadisticas, semaforo);
+            sem_wait(sem_pantalla);
+            printf("([PID %d] finalizo la instalacion de %s en auto %d)\n", getpid(), "pintura", i + 1);
+            sem_post(sem_pantalla);
         }
         exit(0);
     }
@@ -451,6 +479,7 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
     sem_close(sem_vidrios);
     sem_close(sem_interior);
     sem_close(sem_pintura);
+    sem_close(sem_pantalla);
 
 
     sem_unlink("semaforo");
@@ -458,6 +487,7 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
     sem_unlink("sem_vidrios");
     sem_unlink("sem_interior");
     sem_unlink("sem_pintura");
+    sem_unlink("sem_pantalla");
 
     munmap(estadisticas, sizeof(t_estadisticas));
     shm_unlink(NombreMemoria);
