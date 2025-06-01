@@ -11,6 +11,8 @@
 
 #define PUERTO 12345            // Puerto en el que el servidor escuchará conexiones
 
+//main = servidor
+
 // Prototipo de función para manejar a cada cliente
 void *manejadorCliente(void *arg);
 
@@ -20,6 +22,7 @@ int main() {
     socklen_t clienteLen = sizeof(clienteAddr);        // Longitud de la estructura cliente
     pthread_t hiloCliente;                             // ID del hilo para manejar clientes
     int opt = 1;                                        // Opción usada para setsockopt()
+    srand(time(NULL));
 
     // Crear socket TCP (AF_INET, SOCK_STREAM)
     servidor = socket(AF_INET, SOCK_STREAM, 0);

@@ -22,7 +22,7 @@ int frenteCola = 0;
 int finalCola = 0;
 
 // Número secreto que deben adivinar los jugadores (se genera aleatoriamente)
-int numeroSecreto = 2;
+int numeroSecreto;
 
 // Número de la ronda actual
 int rondaActual = 0;

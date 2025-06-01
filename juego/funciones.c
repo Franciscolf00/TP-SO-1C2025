@@ -74,7 +74,10 @@ void terminarJuego() {
 }
 
 // Maneja la conexión de un jugador que se conecta por socket.
-/*void manejarConexionJugador(int socket) {
+void manejarConexionJugador(int socket) {
+
+    //numeroSecreto = rand() % 10 + 1;
+
     pthread_mutex_lock(&mutexJugadores); // Bloquea acceso a la lista de jugadores.
 
     // Si la sala está llena o el juego ya está activo, pone al jugador en cola.
@@ -111,8 +114,13 @@ void terminarJuego() {
         return;
     }
     pthread_mutex_unlock(&mutexJugadores);
+
+    printf("%d \n", numeroSecreto);
+   // iniciarJuego();
     // Bucle principal del juego para este jugador mientras el juego esté activo.
     while (juegoActivo) {
+        iniciarJuego();
+        //numeroSecreto = rand() % 10 + 1;
         pthread_mutex_lock(&mutexJuego);
 
         // Le avisa al jugador que es su turno para enviar un intento.
@@ -240,7 +248,7 @@ void terminarJuego() {
         }
     }
     close(socket); // Cierra el socket si el jugador no quiere seguir.
-}*/
+}
 
 // Agrega un socket a la cola de espera si la sala está llena.
 void agregarACola(int socketCliente) {

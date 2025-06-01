@@ -1,7 +1,7 @@
 #ifndef FUNCIONES_H
 #define FUNCIONES_H
 
-//void manejarConexionJugador(int socketCliente);
+void manejarConexionJugador(int socketCliente);
 void iniciarJuego();
 void enviarMensaje(int socket, const char* mensaje);
 void notificarTodos(const char* mensaje);
