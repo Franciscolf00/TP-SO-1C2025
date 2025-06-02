@@ -435,12 +435,12 @@ for (i = 0; i < ESTACIONES_TRABAJO; i++) {
 }
 
     // Imprimir resumen
-    printf("\nProducción terminada\n");
+    printf("\nPRODUCCION TERMINADA\n");
 
     printf("Autos producidos: %d\n", MAX_AUTOS);
-    printf("\nPartes defectuosas: %d\n", estadisticas->partes_defectuosas);
+    printf("Partes defectuosas: %d\n", estadisticas->partes_defectuosas);
 
-    printf("Defectos por pieza: \n");
+    printf("DEFECTOS POR PIEZAS \n");
     printf("Chasis defectuosos: %d\n",estadisticas->defectos_por_pieza[ESTACION_CHASIS]);
     printf("Motores defectuosos: %d\n",estadisticas->defectos_por_pieza[ESTACION_MOTOR]);
     printf("Vidrios defectuosos: %d\n",estadisticas->defectos_por_pieza[ESTACION_VIDRIOS]);
