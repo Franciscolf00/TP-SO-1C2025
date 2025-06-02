@@ -62,6 +62,7 @@ int main() {
 
     // Crear un hilo separado que maneja el flujo del juego (inicio, rondas, etc.)
     pthread_t hiloJuego;
+    //pthread_create(&hiloJuego, NULL, (void *)iniciarJuego, NULL);
     pthread_create(&hiloJuego, NULL, (void*(*)(void*))iniciarJuego, NULL);
     pthread_detach(hiloJuego);  // Se separa para que se ejecute en segundo plano
 

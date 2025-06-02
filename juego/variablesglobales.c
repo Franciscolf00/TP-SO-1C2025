@@ -53,3 +53,7 @@ pthread_cond_t cond_ronda_terminada = PTHREAD_COND_INITIALIZER;
 
 // Variable de condición que indica que todos los jugadores realizaron su intento
 pthread_cond_t cond_todosIntentos = PTHREAD_COND_INITIALIZER;
+
+pthread_cond_t cond_juego_activo = PTHREAD_COND_INITIALIZER;
+
+pthread_cond_t cond_nueva_ronda = PTHREAD_COND_INITIALIZER;

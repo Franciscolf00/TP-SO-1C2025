@@ -54,5 +54,7 @@ extern pthread_cond_t cond_inicio_juego;     // Señaliza que ya hay suficientes
 extern pthread_cond_t cond_turno;            // Coordina el turno de cada jugador
 extern pthread_cond_t cond_ronda_terminada;  // Señaliza que terminó la ronda actual
 extern pthread_cond_t cond_todosIntentos;    // Señaliza que todos los jugadores ya hicieron su intento
+extern pthread_cond_t cond_juego_activo;
+extern pthread_cond_t cond_nueva_ronda;
 
 #endif 
