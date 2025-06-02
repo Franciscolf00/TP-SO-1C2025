@@ -37,9 +37,12 @@ void iniciarJuego() {
 }
 
 
-// Envía un mensaje (string) al socket indicado.
 void enviarMensaje(int socket, const char* mensaje) {
-    write(socket, mensaje, strlen(mensaje)); // Escribe el mensaje en el socket, usando la longitud del string.
+    // Agregar mutex para escritura segura por socket
+    static pthread_mutex_t mutexEscritura = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&mutexEscritura);
+    write(socket, mensaje, strlen(mensaje));
+    pthread_mutex_unlock(&mutexEscritura);
 }
 
 // Envía un mensaje a todos los jugadores activos.
@@ -73,6 +76,12 @@ void iniciarRonda() {
     printf("Numero secreto: %d\n",numeroSecreto);
     rondaTerminada = false;  // Importante: marcar como NO terminada al inicio
     
+    //AGREGO PARA PROBAR
+     // Resetear turno
+    pthread_mutex_lock(&mutexTurno);
+    turnoActual = 0;
+    pthread_mutex_unlock(&mutexTurno);
+
     // Resetear intentos de jugadores
     pthread_mutex_lock(&mutexJugadores);
     for (int i = 0; i < MAX_JUGADORES; i++) {
@@ -88,29 +97,39 @@ void iniciarRonda() {
     snprintf(msg, sizeof(msg), "Nueva ronda #%d iniciada. ¡Adivina el número entre 1 y 10!\n", rondaActual);
     notificarTodos(msg);
     printf("Servidor: %s", msg);
-    
-    // IMPORTANTE: Señalar a todos los hilos que hay una nueva ronda
+
     pthread_cond_broadcast(&cond_nueva_ronda);
-    
     pthread_mutex_unlock(&mutexJuego);
+    printf("Servidor: %s", msg);
+
+    
+    //PRUEBO COMENTNADO ESTO
+    // IMPORTANTE: Señalar a todos los hilos que hay una nueva ronda
+    //pthread_cond_broadcast(&cond_nueva_ronda);
+    
+   // pthread_mutex_unlock(&mutexJuego);
+    
 }
   
 // Termina el juego, notificando a todos y mostrando puntajes.
 void terminarJuego() {
     pthread_mutex_lock(&mutexJuego);      // Bloquea mutex del juego.
     juegoActivo = false;                  // Marca que el juego ya no está activo.
+    pthread_mutex_unlock(&mutexJuego);    // Libera mutex.
+    //NOtificar terminacion con delay para asegurar el orden
+    sleep(1);
     notificarTodos("El juego ha terminado. Gracias por participar.\n"); // Notifica a todos.
     mostrarTablaPuntajes();               // Muestra la tabla de puntajes en consola servidor.
-    pthread_mutex_unlock(&mutexJuego);   // Libera mutex.
+       
+    // Despertar a todos los hilos que puedan estar esperando
+    pthread_cond_broadcast(&cond_ronda_terminada);
+    pthread_cond_broadcast(&cond_nueva_ronda);
+    sleep(1);
 }
-
-
-//Esta ya funciona, mas o menos
 
 void manejarConexionJugador(int socket) {
     pthread_mutex_lock(&mutexJugadores);
 
-    // Si la sala está llena o el juego ya está activo, pone al jugador en cola.
     if (jugadoresConectados >= MAX_JUGADORES || juegoActivo) {
         enviarMensaje(socket, "Sala llena o juego en curso. Quedas en cola.\n");
         agregarACola(socket);
@@ -118,7 +137,6 @@ void manejarConexionJugador(int socket) {
         return;
     }
 
-    // Asigna id al nuevo jugador
     int id = jugadoresConectados;
     jugadores[id].socket = socket;
     jugadores[id].puntos = 0;
@@ -134,7 +152,6 @@ void manejarConexionJugador(int socket) {
     enviarMensaje(socket, "Bienvenido. Esperando inicio de juego...\n");
     esperarJugadores();
 
-    // Verifica que el jugador siga activo
     pthread_mutex_lock(&mutexJugadores);
     if (!jugadores[id].activo) {
         pthread_mutex_unlock(&mutexJugadores);
@@ -144,12 +161,11 @@ void manejarConexionJugador(int socket) {
     }
     pthread_mutex_unlock(&mutexJugadores);
 
-    // BUCLE PRINCIPAL POR RONDA - cada jugador espera su turno en cada ronda
+    // BUCLE PRINCIPAL DEL JUEGO
     while (juegoActivo) {
-        // ESPERAR A QUE INICIE UNA NUEVA RONDA
+        // Esperar nueva ronda
         pthread_mutex_lock(&mutexJuego);
         while (juegoActivo && rondaTerminada) {
-            // Espera a que la ronda actual termine y comience una nueva
             pthread_cond_wait(&cond_nueva_ronda, &mutexJuego);
         }
         
@@ -159,38 +175,59 @@ void manejarConexionJugador(int socket) {
         }
         pthread_mutex_unlock(&mutexJuego);
 
-        // BUCLE DE TURNOS DENTRO DE LA RONDA
-        while (juegoActivo) {
-            pthread_mutex_lock(&mutexJuego);
-            if (rondaTerminada) {
-                pthread_mutex_unlock(&mutexJuego);
-                break; // Sale del bucle de turnos para esperar nueva ronda
-            }
-            pthread_mutex_unlock(&mutexJuego);
-
-            // Verificar si ya hizo intento en este turno
-            pthread_mutex_lock(&mutexJugadores);
-            if (jugadores[id].intentoHecho) {
-                pthread_mutex_unlock(&mutexJugadores);
-                // Ya hizo su intento, espera a que todos terminen
+        // Dar una oportunidad a cada jugador activo de intentar
+        bool jugadorYaIntento = false;
+        
+        while (juegoActivo && !rondaTerminada && !jugadorYaIntento) {
+            // Esperar turno específico del jugador
+            pthread_mutex_lock(&mutexTurno);
+            while (turnoActual != id && !rondaTerminada && juegoActivo) {
+                pthread_mutex_unlock(&mutexTurno);
+                usleep(50000); // 50ms
+                pthread_mutex_lock(&mutexTurno);
+                
+                // Verificar si la ronda terminó mientras esperaba
                 pthread_mutex_lock(&mutexJuego);
-                while (!rondaTerminada && !todosIntentaronOTimeout()) {
+                if (rondaTerminada) {
                     pthread_mutex_unlock(&mutexJuego);
-                    usleep(100000); // Espera 100ms
-                    pthread_mutex_lock(&mutexJuego);
+                    pthread_mutex_unlock(&mutexTurno);
+                    goto salir_bucle_turnos;
                 }
                 pthread_mutex_unlock(&mutexJuego);
+            }
+            
+            if (rondaTerminada || !juegoActivo) {
+                pthread_mutex_unlock(&mutexTurno);
+                break;
+            }
+            pthread_mutex_unlock(&mutexTurno);
+
+            // Verificar si el jugador sigue activo
+            pthread_mutex_lock(&mutexJugadores);
+            if (!jugadores[id].activo) {
+                pthread_mutex_unlock(&mutexJugadores);
+                break;
+            }
+            
+            // Verificar si ya hizo intento
+            if (jugadores[id].intentoHecho) {
+                pthread_mutex_unlock(&mutexJugadores);
+                jugadorYaIntento = true;
+                // Pasar turno al siguiente jugador
+                pthread_mutex_lock(&mutexTurno);
+                turnoActual = (turnoActual + 1) % MAX_JUGADORES;
+                pthread_mutex_unlock(&mutexTurno);
                 continue;
             }
             pthread_mutex_unlock(&mutexJugadores);
 
-            // Pedir intento al jugador
-            enviarMensaje(socket, "Es tu turno para enviar un número (1-10):\n");
+            // Solicitar intento
+            enviarMensaje(socket, "Es tu turno. Ingresa un número (1-10): ");
 
             char buffer[256];
             int leido = read(socket, buffer, sizeof(buffer) - 1);
             if (leido <= 0) {
-                // Desconexión del jugador
+                // Desconexión
                 pthread_mutex_lock(&mutexJugadores);
                 jugadores[id].activo = false;
                 jugadoresConectados--;
@@ -200,148 +237,143 @@ void manejarConexionJugador(int socket) {
             }
 
             buffer[leido] = '\0';
+            // Remover salto de línea
+            if (buffer[leido-1] == '\n') buffer[leido-1] = '\0';
+            
             int intento = atoi(buffer);
             
             if (intento < 1 || intento > 10) {
-                enviarMensaje(socket, "Número inválido, debe estar entre 1 y 10.\n");
+                enviarMensaje(socket, "Número inválido. Debe estar entre 1 y 10.\n");
                 continue;
             }
 
-            // Guardar intento
+            // Procesar intento
             pthread_mutex_lock(&mutexJugadores);
             jugadores[id].ultimoIntento = intento;
             jugadores[id].intentoHecho = true;
             pthread_mutex_unlock(&mutexJugadores);
 
-            // Esperar a que todos hagan intento o timeout
-            esperarTodosIntentos();
+            // Evaluar intento
+            evaluarIntento(id);
+            jugadorYaIntento = true;
 
-            // Evaluar intentos (solo un hilo debe hacer esto)
-            evaluarIntentos();
+            // Pasar turno al siguiente jugador
+            pthread_mutex_lock(&mutexTurno);
+            turnoActual = (turnoActual + 1) % MAX_JUGADORES;
+            pthread_mutex_unlock(&mutexTurno);
+        }
+        
+        salir_bucle_turnos:;
+    }
+}
+
+// Función para mostrar resumen de la ronda (opcional, puedes agregarla)
+void mostrarResumenRonda() {
+    pthread_mutex_lock(&mutexJugadores);
+    printf("=== Resumen Ronda %d ===\n", rondaActual);
+    printf("Número secreto era: %d\n", numeroSecreto);
+    
+    char mensajeResumen[500] = "Resumen de la ronda:\n";
+    char temp[100];
+    
+    bool alguienAcerto = false;
+    for (int i = 0; i < MAX_JUGADORES; i++) {
+        if (jugadores[i].activo) {
+            if (jugadores[i].ultimoIntento == numeroSecreto) {
+                snprintf(temp, sizeof(temp), "%s acertó\n", jugadores[i].nombre);
+                alguienAcerto = true;
+            } else {
+                snprintf(temp, sizeof(temp), "%s intentó %d\n", 
+                        jugadores[i].nombre, jugadores[i].ultimoIntento);
+            }
+            strcat(mensajeResumen, temp);
+            printf("%s", temp);
         }
     }
     
-    // Preguntar si quiere seguir jugando
-    enviarMensaje(socket, "¿Querés seguir jugando? (s/n):\n");
-    char respuesta[10];
-    int r = read(socket, respuesta, sizeof(respuesta)-1);
-    if (r > 0) {
-        respuesta[r] = '\0';
-        if (respuesta[0] == 'n' || respuesta[0] == 'N') {
-            pthread_mutex_lock(&mutexJugadores);
-            jugadores[id].activo = false;
-            jugadoresConectados--;
-            pthread_mutex_unlock(&mutexJugadores);
-            enviarMensaje(socket, "Gracias por jugar!\n");
-            close(socket);
-
-            // Sacar jugador de cola si hay
-            pthread_mutex_lock(&mutexCola);
-            if (frenteCola != finalCola) {
-                int s = colaEspera[frenteCola];
-                frenteCola = (frenteCola + 1) % MAX_COLA_ESPERA;
-                pthread_mutex_unlock(&mutexCola);
-                manejarConexionJugador(s);
-                return;
-            }
-            pthread_mutex_unlock(&mutexCola);
-        }
+    if (!alguienAcerto) {
+        strcat(mensajeResumen, "Nadie acertó esta ronda.\n");
+        printf("Nadie acertó esta ronda.\n");
     }
-    close(socket);
+    
+    printf("=====================\n");
+    pthread_mutex_unlock(&mutexJugadores);
+    
+    // Enviar resumen a todos los jugadores
+    notificarTodos(mensajeResumen);
 }
 
 
-
+// Función  para verificar si todos los jugadores activos intentaron
 bool todosIntentaronOTimeout() {
-    static time_t inicioEspera = 0;
-    if (inicioEspera == 0) inicioEspera = time(NULL);
-    
     pthread_mutex_lock(&mutexJugadores);
     bool todosIntentaron = true;
+    int jugadoresActivos = 0;
+    
     for (int i = 0; i < MAX_JUGADORES; i++) {
-        if (jugadores[i].activo && !jugadores[i].intentoHecho) {
-            todosIntentaron = false;
-            break;
+        if (jugadores[i].activo) {
+            jugadoresActivos++;
+            if (!jugadores[i].intentoHecho) {
+                todosIntentaron = false;
+            }
         }
     }
+    
     pthread_mutex_unlock(&mutexJugadores);
     
-    bool timeout = (time(NULL) - inicioEspera >= 10);
-    
-    if (todosIntentaron || timeout) {
-        inicioEspera = 0; // Reset para próxima vez
-        return true;
+    // Si no hay jugadores activos, considerar que "todos" intentaron
+    if (jugadoresActivos == 0) {
+        todosIntentaron = true;
     }
-    return false;
+    
+    return todosIntentaron;
 }
 
-void esperarTodosIntentos() {
-    time_t inicio = time(NULL);
-    while (!todosIntentaronOTimeout() && time(NULL) - inicio < 10) {
-        usleep(100000); // 100ms
-    }
-}
 
-void evaluarIntentos() {
-    static pthread_mutex_t mutexEvaluacion = PTHREAD_MUTEX_INITIALIZER;
-    
-    // Solo un hilo debe evaluar
-    if (pthread_mutex_trylock(&mutexEvaluacion) != 0) {
-        return; // Otro hilo ya está evaluando
-    }
-    
+// Función  para evaluar un intento individual
+void evaluarIntento(int jugadorId) {
     pthread_mutex_lock(&mutexJugadores);
-    bool alguienAcerto = false;
-    int ganador = -1;
-    
-    // Evaluar intentos
-    for (int i = 0; i < MAX_JUGADORES; i++) {
-        if (!jugadores[i].activo || !jugadores[i].intentoHecho) continue;
-        if (jugadores[i].ultimoIntento == numeroSecreto) {
-            alguienAcerto = true;
-            ganador = i;
-            jugadores[i].puntos++;
-        }
+    if (!jugadores[jugadorId].activo || !jugadores[jugadorId].intentoHecho) {
+        pthread_mutex_unlock(&mutexJugadores);
+        return;
     }
     
-    // Enviar respuestas individuales
-    for (int i = 0; i < MAX_JUGADORES; i++) {
-        if (!jugadores[i].activo || !jugadores[i].intentoHecho) continue;
-        char resp[50];
-        int val = jugadores[i].ultimoIntento;
-        if (val == numeroSecreto) {
-            snprintf(resp, sizeof(resp), "¡Acertaste!\n");
-        } else if (val < numeroSecreto) {
-            snprintf(resp, sizeof(resp), "Mayor.\n");
-        } else {
-            snprintf(resp, sizeof(resp), "Menor.\n");
-        }
-        enviarMensaje(jugadores[i].socket, resp);
+    int intento = jugadores[jugadorId].ultimoIntento;
+    bool acerto = (intento == numeroSecreto);
+    
+    // Enviar respuesta individual inmediatamente
+    char respuesta[100];
+    if (acerto) {
+        snprintf(respuesta, sizeof(respuesta), "¡Correcto! El número era %d. ¡Ganaste!\n", numeroSecreto);
+        jugadores[jugadorId].puntos++;
+        
+        // Notificar a todos sobre este ganador (sin terminar la ronda aún)
+        char msgGanador[100];
+        snprintf(msgGanador, sizeof(msgGanador), "¡%s acertó el número!\n", jugadores[jugadorId].nombre);
+        pthread_mutex_unlock(&mutexJugadores); // Desbloquear antes de notificar
+        
+        enviarMensaje(jugadores[jugadorId].socket, respuesta);
+        notificarTodos(msgGanador);
+        
+        pthread_mutex_lock(&mutexJugadores); // Volver a bloquear
+    } else if (intento < numeroSecreto) {
+        snprintf(respuesta, sizeof(respuesta), "Tu número %d es menor. El número secreto es mayor.\n", intento);
+        enviarMensaje(jugadores[jugadorId].socket, respuesta);
+    } else {
+        snprintf(respuesta, sizeof(respuesta), "Tu número %d es mayor. El número secreto es menor.\n", intento);
+        enviarMensaje(jugadores[jugadorId].socket, respuesta);
     }
+    
     pthread_mutex_unlock(&mutexJugadores);
     
-    if (alguienAcerto) {
-        char msg[100];
-        snprintf(msg, sizeof(msg), "¡Jugador %d ganó la ronda %d!\n", ganador + 1, rondaActual);
-        notificarTodos(msg);
-        
+    // IMPORTANTE: No terminar la ronda aca, solo verificar si todos intentaron
+    if (todosIntentaronOTimeout()) {
         pthread_mutex_lock(&mutexJuego);
         rondaTerminada = true;
         pthread_cond_signal(&cond_ronda_terminada);
         pthread_mutex_unlock(&mutexJuego);
-    } else {
-        // Resetear intentos para siguiente turno
-        pthread_mutex_lock(&mutexJugadores);
-        for (int i = 0; i < MAX_JUGADORES; i++) {
-            if (jugadores[i].activo) jugadores[i].intentoHecho = false;
-        }
-        pthread_mutex_unlock(&mutexJugadores);
     }
-    
-    pthread_mutex_unlock(&mutexEvaluacion);
 }
-
-
 
 // Agrega un socket a la cola de espera si la sala está llena.
 void agregarACola(int socketCliente) {

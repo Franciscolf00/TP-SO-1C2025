@@ -26,5 +26,6 @@ bool todosIntentaronOTimeout();
 // Espera hasta que todos los jugadores hagan sus intentos o se agote el timeout
 void esperarTodosIntentos();
 
+void evaluarIntento(int jugadorId);
 
 #endif

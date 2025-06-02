@@ -37,7 +37,7 @@ extern int jugadoresJugando;
 extern int colaEspera[MAX_COLA_ESPERA]; // Cola circular de sockets o IDs de jugadores
 extern int frenteCola;                 // Índice del primer elemento en la cola
 extern int finalCola;                  // Índice del último elemento en la cola
-
+extern int turnoActual;
 // Variables que controlan el estado general del juego
 extern int numeroSecreto;      // Número secreto que los jugadores deben adivinar (1-10)
 extern int rondaActual;        // Número de la ronda actual
@@ -48,6 +48,7 @@ extern bool rondaTerminada;    // Indica si todos los jugadores ya jugaron y se 
 extern pthread_mutex_t mutexJugadores; // Protege el acceso al arreglo de jugadores
 extern pthread_mutex_t mutexCola;      // Protege el acceso a la cola de espera
 extern pthread_mutex_t mutexJuego;     // Protege variables del estado del juego
+extern pthread_mutex_t mutexTurno;
 
 // Variables de condición para coordinar el flujo de ejecución entre los hilos
 extern pthread_cond_t cond_inicio_juego;     // Señaliza que ya hay suficientes jugadores para comenzar

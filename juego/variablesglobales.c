@@ -57,3 +57,6 @@ pthread_cond_t cond_todosIntentos = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_juego_activo = PTHREAD_COND_INITIALIZER;
 
 pthread_cond_t cond_nueva_ronda = PTHREAD_COND_INITIALIZER;
+
+int turnoActual = 0;
+pthread_mutex_t mutexTurno = PTHREAD_MUTEX_INITIALIZER;
