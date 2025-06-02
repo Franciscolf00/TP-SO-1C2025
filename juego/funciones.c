@@ -265,43 +265,89 @@ void manejarConexionJugador(int socket) {
         
         salir_bucle_turnos:;
     }
-}
 
-// Función para mostrar resumen de la ronda (opcional, puedes agregarla)
-void mostrarResumenRonda() {
-    pthread_mutex_lock(&mutexJugadores);
-    printf("=== Resumen Ronda %d ===\n", rondaActual);
-    printf("Número secreto era: %d\n", numeroSecreto);
-    
-    char mensajeResumen[500] = "Resumen de la ronda:\n";
-    char temp[100];
-    
-    bool alguienAcerto = false;
-    for (int i = 0; i < MAX_JUGADORES; i++) {
-        if (jugadores[i].activo) {
-            if (jugadores[i].ultimoIntento == numeroSecreto) {
-                snprintf(temp, sizeof(temp), "%s acertó\n", jugadores[i].nombre);
-                alguienAcerto = true;
-            } else {
-                snprintf(temp, sizeof(temp), "%s intentó %d\n", 
-                        jugadores[i].nombre, jugadores[i].ultimoIntento);
+    // Preguntar si quiere seguir jugando
+    enviarMensaje(socket, "¿Querés seguir jugando? (s/n):\n");
+    char respuesta[10];
+    int r = read(socket, respuesta, sizeof(respuesta)-1);
+    if (r > 0) {
+        respuesta[r] = '\0';
+        if (respuesta[0] == 's' || respuesta[0] == 'S') {
+            // El jugador quiere seguir jugando, reiniciar su estado para nueva partida
+            pthread_mutex_lock(&mutexJugadores);
+            jugadores[id].intentoHecho = false;
+            jugadores[id].ultimoIntento = -1;
+            jugadores[id].quiereSeguir = true;
+            pthread_mutex_unlock(&mutexJugadores);
+            
+            enviarMensaje(socket, "¡Seguís en el juego! Esperando nueva ronda...\n");
+            // Volver al bucle principal del juego
+            return; // O usar goto para volver al inicio del bucle principal si es necesario
+        } else if (respuesta[0] == 'n' || respuesta[0] == 'N') {
+            pthread_mutex_lock(&mutexJugadores);
+            jugadores[id].activo = false;
+            jugadoresConectados--;
+            pthread_mutex_unlock(&mutexJugadores);
+            enviarMensaje(socket, "Gracias por jugar!\n");
+            close(socket);
+
+            // Sacar jugador de cola si hay
+            pthread_mutex_lock(&mutexCola);
+            if (frenteCola != finalCola) {
+                int s = colaEspera[frenteCola];
+                frenteCola = (frenteCola + 1) % MAX_COLA_ESPERA;
+                pthread_mutex_unlock(&mutexCola);
+                manejarConexionJugador(s);
+                return;
             }
-            strcat(mensajeResumen, temp);
-            printf("%s", temp);
+            pthread_mutex_unlock(&mutexCola);
         }
     }
-    
-    if (!alguienAcerto) {
-        strcat(mensajeResumen, "Nadie acertó esta ronda.\n");
-        printf("Nadie acertó esta ronda.\n");
-    }
-    
-    printf("=====================\n");
-    pthread_mutex_unlock(&mutexJugadores);
-    
-    // Enviar resumen a todos los jugadores
-    notificarTodos(mensajeResumen);
 }
+    /*
+     // Preguntar si quiere seguir jugando
+    enviarMensaje(socket, "¿Querés seguir jugando? (s/n):\n");
+    char respuesta[10];
+    int r = read(socket, respuesta, sizeof(respuesta)-1);
+    if (r > 0) {
+        respuesta[r] = '\0';
+        if (respuesta[0] == 'n' || respuesta[0] == 'N') 
+        {
+            pthread_mutex_lock(&mutexJugadores);
+            jugadores[id].activo = false;
+            jugadoresConectados--;
+            pthread_mutex_unlock(&mutexJugadores);
+            enviarMensaje(socket, "Gracias por jugar!\n");
+            close(socket);
+        }
+        else if (respuesta[0] == 's' || respuesta[0] == 'S')
+        {
+            //el jugador quiere seguir jugando, reinicio la partida
+            pthread_mutex_lock(&mutexJugadores);
+            jugadores[id].intentoHecho = false;
+            jugadores[id].ultimoIntento = -1;
+            jugadores[id].quiereSeguir = true;
+            pthread_mutex_unlock(&mutexJugadores);
+            enviarMensaje(socket, "¡Seguís en el juego! Esperando nueva ronda...\n");
+            
+            //Vuelve al bucle principal?? al cliente??
+            return;
+            
+            // Sacar jugador de cola si hay
+            pthread_mutex_lock(&mutexCola);
+            if (frenteCola != finalCola) {
+                int s = colaEspera[frenteCola];
+                frenteCola = (frenteCola + 1) % MAX_COLA_ESPERA;
+                pthread_mutex_unlock(&mutexCola);
+                manejarConexionJugador(s);
+                return;
+            }
+            pthread_mutex_unlock(&mutexCola);
+        }
+    }
+}
+*/
+
 
 
 // Función  para verificar si todos los jugadores activos intentaron
