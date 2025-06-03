@@ -1,17 +1,15 @@
 #include <stdio.h>              
 #include <stdlib.h>         
 #include <string.h>           
-#include <unistd.h>             // Funciones POSIX como close(), read(), write()
-#include <pthread.h>            // Biblioteca para manejo de hilos (pthreads)
-#include <netinet/in.h>         // Estructuras para sockets (sockaddr_in, etc.)
-#include <sys/socket.h>         // Funciones y constantes para sockets
+#include <unistd.h>             
+#include <pthread.h>            
+#include <netinet/in.h>        
+#include <sys/socket.h>        
 
 #include "variablesglobal.h"    
 #include "funciones.h"          
 
 #define PUERTO 12345            // Puerto en el que el servidor escuchará conexiones
-
-//main = servidor
 
 // Prototipo de función para manejar a cada cliente
 void *manejadorCliente(void *arg);

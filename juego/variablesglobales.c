@@ -1,4 +1,4 @@
-#include "variablesglobal.h"  // Incluye las declaraciones de variables, estructuras y constantes globales
+#include "variablesglobal.h" 
 
 // Arreglo de jugadores activos en el juego
 Jugador jugadores[MAX_JUGADORES];

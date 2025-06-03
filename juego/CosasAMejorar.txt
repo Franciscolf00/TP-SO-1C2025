@@ -1,0 +1,2 @@
+- Una vez finalizado el juego, si los 5 clientes seleccionan que quieren continuar, el juego no comienza de nuevo.
+- Se podría continuar con al menos dos jugadores y aceptar otros clientes que esten en espera. 

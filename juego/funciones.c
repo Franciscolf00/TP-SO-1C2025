@@ -1,14 +1,14 @@
-#include <stdio.h>        // Incluye funciones estándar para entrada/salida, como printf.
-#include <stdlib.h>       // Incluye funciones estándar como malloc, rand, exit.
-#include <string.h>       // Funciones para manejo de cadenas, como strlen, snprintf.
-#include <unistd.h>       // Funciones POSIX, como write, read, close, usleep.
-#include <time.h>         // Funciones para manejo de tiempo, como time, srand.
-#include "variablesglobal.h" // Archivo propio que declara variables globales (ej. mutex, jugadores).
-#include "funciones.h"    // Archivo propio con declaraciones de funciones utilizadas aquí.
+#include <stdio.h>       
+#include <stdlib.h>       
+#include <string.h>       
+#include <unistd.h>       
+#include <time.h>        
+#include "variablesglobal.h"
+#include "funciones.h"    
 
 
 // Función que controla el ciclo general del juego: iniciar rondas, esperar fin, etc.
-//ESTA FUNCIONA
+
 void iniciarJuego() {
     pthread_mutex_lock(&mutexJuego);
     while(!juegoActivo)
@@ -74,9 +74,8 @@ void iniciarRonda() {
     rondaActual++;
     numeroSecreto = rand() % 10 + 1;
     printf("Numero secreto: %d\n",numeroSecreto);
-    rondaTerminada = false;  // Importante: marcar como NO terminada al inicio
+    rondaTerminada = false;  // marca como NO terminada al inicio
     
-    //AGREGO PARA PROBAR
      // Resetear turno
     pthread_mutex_lock(&mutexTurno);
     turnoActual = 0;
@@ -100,15 +99,6 @@ void iniciarRonda() {
 
     pthread_cond_broadcast(&cond_nueva_ronda);
     pthread_mutex_unlock(&mutexJuego);
-    printf("Servidor: %s", msg);
-
-    
-    //PRUEBO COMENTNADO ESTO
-    // IMPORTANTE: Señalar a todos los hilos que hay una nueva ronda
-    //pthread_cond_broadcast(&cond_nueva_ronda);
-    
-   // pthread_mutex_unlock(&mutexJuego);
-    
 }
   
 // Termina el juego, notificando a todos y mostrando puntajes.
@@ -116,6 +106,7 @@ void terminarJuego() {
     pthread_mutex_lock(&mutexJuego);      // Bloquea mutex del juego.
     juegoActivo = false;                  // Marca que el juego ya no está activo.
     pthread_mutex_unlock(&mutexJuego);    // Libera mutex.
+
     //NOtificar terminacion con delay para asegurar el orden
     sleep(1);
     notificarTodos("El juego ha terminado. Gracias por participar.\n"); // Notifica a todos.
@@ -282,7 +273,7 @@ void manejarConexionJugador(int socket) {
             
             enviarMensaje(socket, "¡Seguís en el juego! Esperando nueva ronda...\n");
             // Volver al bucle principal del juego
-            return; // O usar goto para volver al inicio del bucle principal si es necesario
+            return; // 
         } else if (respuesta[0] == 'n' || respuesta[0] == 'N') {
             pthread_mutex_lock(&mutexJugadores);
             jugadores[id].activo = false;
@@ -367,15 +358,7 @@ void evaluarIntento(int jugadorId) {
     
     pthread_mutex_unlock(&mutexJugadores);
     
-    // IMPORTANTE: No terminar la ronda aca, solo verificar si todos intentaron
-    /*if (todosIntentaronOTimeout()) {
-        pthread_mutex_lock(&mutexJuego);
-        rondaTerminada = true;
-        pthread_cond_signal(&cond_ronda_terminada);
-        pthread_mutex_unlock(&mutexJuego);
-    }*/
-    // IMPORTANTE: Solo terminar la ronda si alguien acertó
-// IMPORTANTE: Solo terminar la ronda si alguien acertó Y todos intentaron
+//  Solo termina la ronda si alguien acertó Y todos intentaron
 if (todosIntentaronOTimeout()) {
     // Verificar si alguien acertó en esta ronda
     pthread_mutex_lock(&mutexJugadores);

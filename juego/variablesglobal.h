@@ -1,8 +1,8 @@
 #ifndef VARIABLESGLOBAL_H
 #define VARIABLESGLOBAL_H
 
-#include <pthread.h>   // Biblioteca para usar hilos (pthread), mutex y variables de condición
-#include <stdbool.h>   // Permite usar el tipo de dato booleano (bool, true, false)
+#include <pthread.h>   
+#include <stdbool.h>   
 
 // Cantidad máxima de jugadores activos que pueden participar al mismo tiempo
 #define MAX_JUGADORES 5
